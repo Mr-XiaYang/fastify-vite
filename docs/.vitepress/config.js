@@ -57,7 +57,7 @@ module.exports = {
   description: 'Fastify plugin for Vite integration',
   themeConfig: {
     displayAllHeaders: true,
-    repo: 'terixjs/fastify-vite',
+    repo: 'fastify/fastify-vite',
     nav: [
       {
         text: 'Quickstart',

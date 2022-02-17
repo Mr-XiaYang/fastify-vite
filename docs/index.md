@@ -85,6 +85,5 @@ Also check out Evan You's [Vite 2.0 announcement][vite-2-announcement] for more 
 <a class="sponsor" href="https://feature.fm" style="height: 35px; width: 180px;">
 <img height="35" style="position: absolute; top: 8px; left: 0px" src="/featurefm.svg" alt="Feature.fm">
 </a>
-<img class="sponsor" width="150" src="/sxdotcom.svg" alt="S​e​x​.com">
 
 See also [acknowledgements](/meta/about.html#acknowledgements).
