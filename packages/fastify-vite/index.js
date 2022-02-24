@@ -15,10 +15,7 @@ const { generateRoute } = require('./static')
 const { processOptions } = require('./options')
 
 async function fastifyVite (fastify, options) {
-  let viteReady
-  const isViteReady = new Promise((resolve) => {
-    viteReady = resolve
-  })
+  const [viteReady, isViteReady] = getPromiseResolver()
 
   fastify.decorate('vite', {
     ready () {
@@ -37,25 +34,12 @@ async function fastifyVite (fastify, options) {
   }
 
   if (options.suppressExperimentalWarnings) {
-    // See https://github.com/nodejs/node/issues/30810
-    const { emitWarning } = process
-
-    process.emitWarning = (warning, ...args) => {
-      if (args[0] === 'ExperimentalWarning') {
-        return
-      }
-      if (args[0] && typeof args[0] === 'object' && args[0].type === 'ExperimentalWarning') {
-        return
-      }
-      return emitWarning(warning, ...args)
-    }
+    suppressExperimentalWarnings()
   }
 
   if (options.generate.enabled || options.generate.server.enabled) {
-    console.log('await build(options)')
     await build(options)
     options.dev = false
-    console.log('options.recalcDist()')
     options.recalcDist()
   }
 
@@ -129,64 +113,7 @@ async function fastifyVite (fastify, options) {
     global: undefined,
     // Not available when NODE_ENV=production
     devServer: vite,
-    get (url, { data, ...routeOptions } = {}) {
-      return this.route(url, { data, method: 'GET', ...routeOptions })
-    },
-    post (url, { data, method, ...routeOptions } = {}) {
-      return this.route(url, { data, method: 'GET', ...routeOptions })
-    },
-    route (url, { getData, getPayload, method, ...routeOptions } = {}) {
-      const preHandler = routeOptions.preHandler || []
-      if (getData) {
-        preHandler.push(
-          async function (req, reply) {
-            req[options.hydration.data] = await getData(
-              {
-                req,
-                params: req.params,
-                reply,
-                $api: this.api && this.api.client,
-                fastify: this,
-                fetch,
-              },
-            )
-          },
-        )
-      }
-      if (getPayload) {
-        preHandler.push(
-          async function (req, reply) {
-            req[options.hydration.payload] = await getPayload(
-              {
-                req,
-                params: req.params,
-                reply,
-                $api: this.api && this.api.client,
-                fastify: this,
-                fetch,
-              },
-            )
-          },
-        )
-        fastify.get(`/-/payload${url}`, async function (req, reply) {
-          return getPayload({
-            req,
-            params: req.params,
-            reply,
-            $api: this.api && this.api.client,
-            fastify: this,
-            fetch,
-          })
-        })
-      }
-      fastify.route({
-        method,
-        url,
-        handler,
-        ...routeOptions,
-        preHandler,
-      })
-    },
+    // routing
   })
 
   for (const route of routes) {
@@ -209,86 +136,14 @@ async function fastifyVite (fastify, options) {
   fastify.vite.commands = async () => {
     await fastify.ready()
     if (fastify.vite.options.eject) {
-      const force = process.argv.includes('--force')
-      for (const blueprintFile of renderer.blueprint) {
-        if (force || !existsSync(resolve(options.root, blueprintFile))) {
-          const filePath = resolve(options.root, blueprintFile)
-          const fileDir = parse(filePath).dir
-          await ensureDir(fileDir)
-          await writeFile(
-            filePath,
-            await readFile(resolve(renderer.path, 'base', blueprintFile)),
-          )
-          console.log(`ℹ ejected ${filePath}.`)
-        }
-      }
-      process.exit()
+      // eject
     }
     if (fastify.vite.options.generate.enabled || fastify.vite.options.generate.server.enabled) {
-      const { generated } = fastify.vite.options.generate
-      const paths = []
-      if (typeof fastify.vite.options.generate.paths === 'function') {
-        await fastify.vite.options.generate.paths(fastify, (path) => paths.push(path))
-      } else if (Array.isArray(fastify.vite.options.generate.paths)) {
-        paths.push(...fastify.vite.options.generate.paths)
-      } else {
-        paths.push(
-          ...routes
-            .filter(({ path }) => matchit.parse(path).every(segment => segment.type === 0))
-            .map(({ path }) => path),
-        )
-      }
-
-      const tasks = []
-      for (const path of paths) {
-        tasks.push(async () => {
-          const result = await generateRoute(fastify.inject({ url: path }), path, options)
-          if (result) {
-            generated(fastify, result, fastify.vite.options.distDir)
-          }
-        })
-      }
-      await Promise.all(tasks.map(task => task()))
-      if (fastify.vite.options.generate.done) {
-        await fastify.vite.options.generate.done(fastify)
-      }
-      if (!fastify.vite.options.generate.server.enabled) {
-        setImmediate(() => {
-          process.exit(0)
-        })
-      }
+      // generate
     }
 
     if (fastify.vite.options.generate.server.enabled) {
-      const { generated } = fastify.vite.options.generate
-      const { port } = fastify.vite.options.generate.server
-      const builder = Fastify()
-      builder.get('*', async (req, reply) => {
-        const path = req.raw.url
-        const result = await generateRoute(fastify.inject({ url: path }), path, options)
-        if (result) {
-          reply.send(`ℹ regenerated ${req.raw.url}`)
-          generated(fastify, result, fastify.vite.options.distDir)
-        }
-      })
-      // @Matteo
-      //
-      // FIXME Unresolved Promise used here just to prevent
-      // execution from advancing into the .listen() call
-      //
-      // Fastify Core Idea: render .listen() ineffective
-      // in case any of the registered onReady hooks returns false
-      await new Promise(() => {
-        builder.listen(port, (err, address) => {
-          if (err) {
-            console.error(err)
-            setImmediate(() => {
-              process.exit(1)
-            })
-          }
-          console.log(`ℹ generate server listening on ${address}`)
-        })
-      })
+      // generate server
     }
   }
 
@@ -304,3 +159,28 @@ async function fastifyVite (fastify, options) {
 }
 
 module.exports = fastifyPlugin(fastifyVite)
+
+function suppressExperimentalWarnings() {
+  // See https://github.com/nodejs/node/issues/30810
+  const { emitWarning } = process
+
+  process.emitWarning = (warning, ...args) => {
+    if (args[0] === 'ExperimentalWarning') {
+      return
+    }
+    if (args[0] && typeof args[0] === 'object' && args[0].type === 'ExperimentalWarning') {
+      return
+    }
+    return emitWarning(warning, ...args)
+  }
+}
+
+function getPromiseResolver () {
+  let resolver
+  return [
+    new Promise((resolve) => {
+      resolver = resolve
+    }),
+    resolver
+  ]
+}
