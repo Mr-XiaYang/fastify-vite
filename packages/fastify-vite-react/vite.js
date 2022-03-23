@@ -8,6 +8,8 @@ module.exports = {
   logLevel: dev ? 'error' : 'info',
   ssr: {
     external: [
+      'fastify-vite',
+      'fastify-vite-react',
       'react',
       'react-router',
       'react-router-dom',
