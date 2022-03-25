@@ -8,7 +8,7 @@ const empty = {}
 function createRenderFunction (createApp) {
   return async function render (fastify, req, reply, url, options) {
     const { entry, distManifest, hydration } = options
-    const { ctx, app, head, routes, router } = await createApp({ fastify, req, reply })
+    const { ctx, app, head, routes, router, ...extra } = await createApp({ fastify, req, reply })
 
     // On the client, hydrate() from fastify-vite/client repeats these steps
     assign(app.config.globalProperties, {
@@ -41,6 +41,7 @@ function createRenderFunction (createApp) {
       entry: entry.client,
       hydration: hydrationScript,
       element,
+      extra,
     }
   }
 }
