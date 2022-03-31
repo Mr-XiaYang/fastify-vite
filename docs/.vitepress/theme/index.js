@@ -1,4 +1,5 @@
-import DefaultTheme from 'vitepress/dist/client/theme-default'
+import Layout from './Layout.vue';
+import NotFound from './NotFound.vue';
 
 import './styles/vars.css'
 import './styles/nav-bar.css'
@@ -12,14 +13,14 @@ import './styles/utils.css'
 
 const components = import.meta.globEager('./components/*.vue');
 
-
 if (typeof document !== 'undefined') {
   document.documentElement.classList.toggle('dark', true)
 }
 
 export default {
-  ...DefaultTheme,
-	enhanceApp({app}) {
+  Layout,
+  NotFound,
+	enhanceApp ({ app }) {
 		// register global components
 		Object.keys(components).forEach(path => {
 			const name = path.replace('./components/', '').replace(/\.vue$/, '');
