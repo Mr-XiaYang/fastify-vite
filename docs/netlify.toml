@@ -1,5 +1,11 @@
 [[redirects]]
-from = "/"
+from = ""
+to = "https://github.com/fastify/fastify-vite"
+status = 302
+force = true
+
+[[redirects]]
+from = "/*"
 to = "https://github.com/fastify/fastify-vite"
 status = 302
 force = true
