@@ -1,4 +1,5 @@
-[[headers]]
-  for = "/*"
-  [headers.values]
-    Basic-Auth = "terix:terix"
+[[redirects]]
+from = “/”
+to = “https://github.com/fastify/fastify-vite”
+status = 302
+force = true
