@@ -1,5 +1,5 @@
 [[redirects]]
-from = “/”
-to = “https://github.com/fastify/fastify-vite”
+from = "/"
+to = "https://github.com/fastify/fastify-vite"
 status = 302
 force = true
